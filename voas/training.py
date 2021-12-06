@@ -44,6 +44,8 @@ def config_callbacks(exp_name):
 def train(model_type, name, data_splits, patch_len, epochs, batch_size, steps_epoch, val_steps, mode):
 
     mirrored_strategy = tf.distribute.MirroredStrategy()
+    options = tf.data.Options()
+    options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
 
     print("[MSG] >>>>> Number of devices: {}".format(mirrored_strategy.num_replicas_in_sync))
 

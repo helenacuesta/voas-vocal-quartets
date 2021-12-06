@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 import mir_eval
 
 import os
 import glob
-import csv
+import argparse
+
 from voas import utils as utils
 from voas import config as config
 from voas import models as models
@@ -142,346 +142,6 @@ def load_mf0_reference(path_to_mf0):
     return timebase, ref_s, ref_a, ref_t, ref_b, mf0
 
 
-'''Evaluation of three real recordings
-'''
-
-# # ## EVAL LOCUS ISTE FROM DCS
-# sal_dir = './data/generalisation/LocusIste/LateDeep/DCS_LocusIste_mixture.npy'
-# mf0_est_dir = './data/generalisation/LocusIste/LateDeep/DCS_LocusIste_mixture.csv'
-# mf0_ref_dir = './data/generalisation/LocusIste/DCS_LocusIste_mixture.csv'
-#
-# salience = load_salience_function(sal_dir)
-#
-# ref_time, ref_s, ref_a, ref_t, ref_b, mf0 = load_mf0_reference(mf0_ref_dir)
-#
-# voascnn = models.voasCNN(PATCH_LEN)
-# voascnn.load_weights("./models/cnn_full.h5")
-# est_saliences = predict_one_example(salience, voascnn)
-#
-# thresh=0.5
-#
-# timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresh)
-# _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresh)
-# _, ten = utils.pitch_activations_to_mf0(est_saliences[2], thresh=thresh)
-# _, bas = utils.pitch_activations_to_mf0(est_saliences[3], thresh=thresh)
-#
-# # construct the multi-pitch predictions
-# predictions = np.zeros([len(timestamp), 5])
-#
-#
-# min_vals = [
-#     np.min(sop[np.where(sop>0)[0]]), np.min(alt[np.where(alt>0)[0]]), np.min(ten[np.where(ten>0)[0]]), np.min(bas[np.where(bas>0)[0]])
-# ]
-# sorted_args = np.argsort(min_vals)
-#
-# predictions[:, 0] = timestamp
-# predictions[:, 1] = sop
-# predictions[:, 2] = alt
-# predictions[:, 3] = ten
-# predictions[:, 4] = bas
-#
-#
-# # max_vals = np.median(predictions[:, 1:], axis=0)
-# # sorted_args = np.argsort(max_vals)
-#
-#
-# est_time = predictions[:, 0]
-# # store already SATB
-# # est_s_ = list(predictions[:, sorted_args[3]+1])
-# # est_t_ = list(predictions[:, sorted_args[1]+1])
-# # est_a_ = list(predictions[:, sorted_args[2]+1])
-# # est_b_ = list(predictions[:, sorted_args[0]+1])
-#
-# est_s_ = list(predictions[:, 1])
-# est_a_ = list(predictions[:, 2])
-# est_t_ = list(predictions[:, 3])
-# est_b_ = list(predictions[:, 4])
-#
-# est_b = []
-# for row in est_b_: est_b.append(np.array([row]))
-# est_t = []
-# for row in est_t_: est_t.append(np.array([row]))
-# est_a = []
-# for row in est_a_: est_a.append(np.array([row]))
-# est_s = []
-# for row in est_s_: est_s.append(np.array([row]))
-#
-#
-# # est_times, est_freqs = predictions[:, 0], list(predictions[:, 1:])
-# #
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_s)):
-#     if fqs == 0:
-#         est_s[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_s = mir_eval.multipitch.evaluate(ref_time, ref_s, est_time, est_s)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_a)):
-#     if fqs == 0:
-#         est_a[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_a = mir_eval.multipitch.evaluate(ref_time, ref_a, est_time, est_a)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_t)):
-#     if fqs == 0:
-#         est_t[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_t = mir_eval.multipitch.evaluate(ref_time, ref_t, est_time, est_t)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_b)):
-#     if fqs == 0:
-#         est_b[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_b = mir_eval.multipitch.evaluate(ref_time, ref_b, est_time, est_b)
-#
-#
-# print("Results VA for Locus Iste from DCS")
-# print("----------------------------------")
-# print("Soprano F-Score = {}".format(2*(metrics_s["Precision"]*metrics_s["Recall"])/(metrics_s["Precision"]+metrics_s["Recall"])))
-# print("Alto F-Score = {}".format(2*(metrics_a["Precision"]*metrics_a["Recall"])/(metrics_a["Precision"]+metrics_a["Recall"])))
-# print("Tenor F-Score = {}".format(2*(metrics_t["Precision"]*metrics_t["Recall"])/(metrics_t["Precision"]+metrics_t["Recall"])))
-# print("Bass F-Score = {}".format(2*(metrics_b["Precision"]*metrics_b["Recall"])/(metrics_b["Precision"]+metrics_b["Recall"])))
-# #
-# #
-# ## EVAL ROSSINYOL FROM CSD
-# sal_dir = './data/generalisation/ElRossinyol/LateDeep/CSD_ER_mixture.npy'
-# mf0_est_dir = './data/generalisation/ElRossinyol/LateDeep/CSD_ER_mixture.csv'
-# mf0_ref_dir = './data/generalisation/ElRossinyol/CSD_ER_mixture.csv'
-#
-# salience = load_salience_function(sal_dir)
-#
-# ref_time, ref_s, ref_a, ref_t, ref_b, mf0 = load_mf0_reference(mf0_ref_dir)
-#
-# voascnn = models.voasCNN(PATCH_LEN)
-# voascnn.load_weights("./models/cnn_full.h5")
-# est_saliences = predict_one_example(salience, voascnn)
-#
-# thresh=0.4
-#
-# timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresh)
-# _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresh)
-# _, ten = utils.pitch_activations_to_mf0(est_saliences[2], thresh=thresh)
-# _, bas = utils.pitch_activations_to_mf0(est_saliences[3], thresh=thresh)
-#
-# # construct the multi-pitch predictions
-# predictions = np.zeros([len(timestamp), 5])
-#
-#
-# min_vals = [
-#     np.min(sop[np.where(sop>0)[0]]), np.min(alt[np.where(alt>0)[0]]), np.min(ten[np.where(ten>0)[0]]), np.min(bas[np.where(bas>0)[0]])
-# ]
-# sorted_args = np.argsort(min_vals)
-#
-# predictions[:, 0] = timestamp
-# predictions[:, 1] = sop
-# predictions[:, 2] = alt
-# predictions[:, 3] = ten
-# predictions[:, 4] = bas
-#
-#
-# # max_vals = np.median(predictions[:, 1:], axis=0)
-# # sorted_args = np.argsort(max_vals)
-# '''plotting
-# '''
-# plt.figure(figsize=(20,15))
-# plt.subplot(221), plt.plot(mf0[:, 0], mf0[:, 3], '.k', markersize=10, label='GT'), \
-# plt.title("$\hat{F0}_S$", fontsize=30)
-# plt.xlim([4, 14]), plt.ylim([200, 800]), plt.ylabel("Frequency (Hz)", fontsize=20)
-# plt.xticks(fontsize=15), plt.yticks(fontsize=15)
-# plt.subplot(222), plt.plot(mf0[:, 0], mf0[:, 1], '.k', markersize=10, label='GT'), plt.title("$\hat{F0}_A$", fontsize=30)
-# plt.xlim([4, 14]), plt.ylim([150, 800])
-# plt.xticks(fontsize=15), plt.yticks(fontsize=15)
-# plt.subplot(223), plt.plot(mf0[:, 0], mf0[:, 4], '.k', markersize=10, label='GT'), plt.title("$\hat{F0}_T$", fontsize=30)
-# plt.xlim([4, 14]), plt.ylim([100, 500])
-# plt.xticks(fontsize=15), plt.yticks(fontsize=15), plt.xlabel("Time (sec)", fontsize=20)
-# plt.subplot(224), plt.plot(mf0[:, 0], mf0[:, 2], '.k', markersize=10, label='GT'), plt.title("$\hat{F0}_B$", fontsize=30)
-# plt.xlim([4, 14]), plt.xlabel("Time (sec)", fontsize=20), plt.ylim([50, 350]), plt.ylabel("Frequency (Hz)", fontsize=20)
-# plt.xticks(fontsize=15), plt.yticks(fontsize=15)
-#
-# est_time = predictions[:, 0]
-# # store already SATB
-# # est_s_ = list(predictions[:, sorted_args[3]+1])
-# # est_t_ = list(predictions[:, sorted_args[1]+1])
-# # est_a_ = list(predictions[:, sorted_args[2]+1])
-# # est_b_ = list(predictions[:, sorted_args[0]+1])
-#
-# est_s_ = list(predictions[:, 1])
-# est_a_ = list(predictions[:, 2])
-# est_t_ = list(predictions[:, 3])
-# est_b_ = list(predictions[:, 4])
-#
-# plt.subplot(221), plt.plot(est_time, est_s_, '.', color='cadetblue', markersize=5, label='Prediction'), plt.legend(fontsize=20)
-# plt.subplot(222), plt.plot(est_time, est_a_, '.', color='cadetblue', markersize=5, label='Prediction')
-# plt.subplot(223), plt.plot(est_time, est_t_, '.', color='cadetblue', markersize=5, label='Prediction')
-# plt.subplot(224), plt.plot(est_time, est_b_, '.', color='cadetblue', markersize=5, label='Prediction')
-#
-# plt.tight_layout()
-# plt.savefig("output_example_rossinyol.png")
-#
-# est_b = []
-# for row in est_b_: est_b.append(np.array([row]))
-# est_t = []
-# for row in est_t_: est_t.append(np.array([row]))
-# est_a = []
-# for row in est_a_: est_a.append(np.array([row]))
-# est_s = []
-# for row in est_s_: est_s.append(np.array([row]))
-#
-#
-# # est_times, est_freqs = predictions[:, 0], list(predictions[:, 1:])
-# #
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_s)):
-#     if fqs == 0:
-#         est_s[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_s = mir_eval.multipitch.evaluate(ref_time, ref_s, est_time, est_s)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_a)):
-#     if fqs == 0:
-#         est_a[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_a = mir_eval.multipitch.evaluate(ref_time, ref_a, est_time, est_a)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_t)):
-#     if fqs == 0:
-#         est_t[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_t = mir_eval.multipitch.evaluate(ref_time, ref_t, est_time, est_t)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_b)):
-#     if fqs == 0:
-#         est_b[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_b = mir_eval.multipitch.evaluate(ref_time, ref_b, est_time, est_b)
-#
-#
-# print("Results VA for El Rossinyol from CSD")
-# print("----------------------------------")
-# print("Soprano F-Score = {}".format(2*(metrics_s["Precision"]*metrics_s["Recall"])/(metrics_s["Precision"]+metrics_s["Recall"])))
-# print("Alto F-Score = {}".format(2*(metrics_a["Precision"]*metrics_a["Recall"])/(metrics_a["Precision"]+metrics_a["Recall"])))
-# print("Tenor F-Score = {}".format(2*(metrics_t["Precision"]*metrics_t["Recall"])/(metrics_t["Precision"]+metrics_t["Recall"])))
-# print("Bass F-Score = {}".format(2*(metrics_b["Precision"]*metrics_b["Recall"])/(metrics_b["Precision"]+metrics_b["Recall"])))
-# #
-# #
-# # ## EVAL DERGREIS FROM CSD
-# sal_dir = './data/generalisation/DerGreis/LateDeep/ECS_DG_mixture.npy'
-# mf0_est_dir = './data/generalisation/DerGreis/LateDeep/ECS_DG_mixture.csv'
-# mf0_ref_dir = './data/generalisation/DerGreis/ECS_DG_mixture.csv'
-#
-# salience = load_salience_function(sal_dir)
-#
-# ref_time, ref_s, ref_a, ref_t, ref_b, mf0 = load_mf0_reference(mf0_ref_dir)
-#
-# voascnn = models.voasCNN(PATCH_LEN)
-# voascnn.load_weights("./models/cnn_full.h5")
-# est_saliences = predict_one_example(salience, voascnn)
-#
-# thresh=0.5
-#
-# timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresh)
-# _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresh)
-# _, ten = utils.pitch_activations_to_mf0(est_saliences[2], thresh=thresh)
-# _, bas = utils.pitch_activations_to_mf0(est_saliences[3], thresh=thresh)
-#
-# # construct the multi-pitch predictions
-# predictions = np.zeros([len(timestamp), 5])
-#
-#
-# min_vals = [
-#     np.min(sop[np.where(sop>0)[0]]), np.min(alt[np.where(alt>0)[0]]), np.min(ten[np.where(ten>0)[0]]), np.min(bas[np.where(bas>0)[0]])
-# ]
-# sorted_args = np.argsort(min_vals)
-#
-# predictions[:, 0] = timestamp
-# predictions[:, 1] = sop
-# predictions[:, 2] = alt
-# predictions[:, 3] = ten
-# predictions[:, 4] = bas
-#
-#
-# # max_vals = np.median(predictions[:, 1:], axis=0)
-# # sorted_args = np.argsort(max_vals)
-#
-#
-# est_time = predictions[:, 0]
-# # store already SATB
-# # est_s_ = list(predictions[:, sorted_args[3]+1])
-# # est_t_ = list(predictions[:, sorted_args[1]+1])
-# # est_a_ = list(predictions[:, sorted_args[2]+1])
-# # est_b_ = list(predictions[:, sorted_args[0]+1])
-#
-# est_s_ = list(predictions[:, 1])
-# est_a_ = list(predictions[:, 2])
-# est_t_ = list(predictions[:, 3])
-# est_b_ = list(predictions[:, 4])
-#
-# est_b = []
-# for row in est_b_: est_b.append(np.array([row]))
-# est_t = []
-# for row in est_t_: est_t.append(np.array([row]))
-# est_a = []
-# for row in est_a_: est_a.append(np.array([row]))
-# est_s = []
-# for row in est_s_: est_s.append(np.array([row]))
-#
-#
-# # est_times, est_freqs = predictions[:, 0], list(predictions[:, 1:])
-# #
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_s)):
-#     if fqs == 0:
-#         est_s[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_s = mir_eval.multipitch.evaluate(ref_time, ref_s, est_time, est_s)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_a)):
-#     if fqs == 0:
-#         est_a[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_a = mir_eval.multipitch.evaluate(ref_time, ref_a, est_time, est_a)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_t)):
-#     if fqs == 0:
-#         est_t[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_t = mir_eval.multipitch.evaluate(ref_time, ref_t, est_time, est_t)
-#
-# # get rid of zeros in prediction for input to mir_eval
-# for i, (tms, fqs) in enumerate(zip(est_time, est_b)):
-#     if fqs == 0:
-#         est_b[i] = np.array([])
-#
-# ## evaluate with monophonic streams
-# metrics_b = mir_eval.multipitch.evaluate(ref_time, ref_b, est_time, est_b)
-#
-#
-# print("Results VA for Der Greis from ECD")
-# print("----------------------------------")
-# print("Soprano F-Score = {}".format(2*(metrics_s["Precision"]*metrics_s["Recall"])/(metrics_s["Precision"]+metrics_s["Recall"])))
-# print("Alto F-Score = {}".format(2*(metrics_a["Precision"]*metrics_a["Recall"])/(metrics_a["Precision"]+metrics_a["Recall"])))
-# print("Tenor F-Score = {}".format(2*(metrics_t["Precision"]*metrics_t["Recall"])/(metrics_t["Precision"]+metrics_t["Recall"])))
-# print("Bass F-Score = {}".format(2*(metrics_b["Precision"]*metrics_b["Recall"])/(metrics_b["Precision"]+metrics_b["Recall"])))
-
 
 '''Evaluation on BSQ
 '''
@@ -498,15 +158,13 @@ all_metrics_b = []
 
 for salience_file in salience_files:
 
-    basename = os.path.basename(salience_file)
-    salience = load_salience_function(salience_file)
 
-    ref_time, ref_s, ref_a, ref_t, ref_b, mf0 = load_mf0_reference(os.path.join(mf0_ref_dir, basename.replace(".npy", ".csv")))
 
-    mode = "time"
+
+    mode = "freq"
 
     voascnn = models.voasConvLSTM(PATCH_LEN)
-    voascnn.load_weights("./models/conv_lstm_full_degraded.h5")
+    voascnn.load_weights("./models/voas_clstm.h5")
 
     if mode == "time":
         est_saliences = predict_one_example(salience, voascnn, mode)
@@ -515,7 +173,8 @@ for salience_file in salience_files:
         est_saliences = predict_one_example(salience, voascnn, mode)
 
 
-    thresh=[0.1, 0.3, 0.4, 0.4]
+    # thresh=[0.1, 0.3, 0.4, 0.5]
+    thresh = [0.36, 0.37, 0.38, 0.41]
 
     timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresh[0])
     _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresh[1])
@@ -543,11 +202,6 @@ for salience_file in salience_files:
 
 
     est_time = predictions[:, 0]
-    # store already SATB
-    # est_s_ = list(predictions[:, sorted_args[3]+1])
-    # est_t_ = list(predictions[:, sorted_args[1]+1])
-    # est_a_ = list(predictions[:, sorted_args[2]+1])
-    # est_b_ = list(predictions[:, sorted_args[0]+1])
 
     est_s_ = list(predictions[:, 1])
     est_a_ = list(predictions[:, 2])
@@ -564,64 +218,115 @@ for salience_file in salience_files:
     for row in est_s_: est_s.append(np.array([row]))
 
 
-    # est_times, est_freqs = predictions[:, 0], list(predictions[:, 1:])
-    #
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(est_time, est_s)):
-        if fqs == 0:
-            est_s[i] = np.array([])
+def predict_one_file(model, salience, thresholds):
 
-    ## evaluate with monophonic streams
-    metrics_s = mir_eval.multipitch.evaluate(ref_time, ref_s, est_time, est_s)
+    est_saliences = predict_one_example(salience, model, mode="freq")
 
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(est_time, est_a)):
-        if fqs == 0:
-            est_a[i] = np.array([])
+    timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresholds[0])
+    _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresholds[1])
+    _, ten = utils.pitch_activations_to_mf0(est_saliences[2], thresh=thresholds[2])
+    _, bas = utils.pitch_activations_to_mf0(est_saliences[3], thresh=thresholds[3])
 
-    ## evaluate with monophonic streams
-    metrics_a = mir_eval.multipitch.evaluate(ref_time, ref_a, est_time, est_a)
+    # construct the multi-pitch predictions
+    predictions = np.zeros([len(timestamp), 5])
 
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(est_time, est_t)):
-        if fqs == 0:
-            est_t[i] = np.array([])
+    predictions[:, 0] = timestamp
+    predictions[:, 1] = sop
+    predictions[:, 2] = alt
+    predictions[:, 3] = ten
+    predictions[:, 4] = bas
 
-    ## evaluate with monophonic streams
-    metrics_t = mir_eval.multipitch.evaluate(ref_time, ref_t, est_time, est_t)
-
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(est_time, est_b)):
-        if fqs == 0:
-            est_b[i] = np.array([])
-
-    ## evaluate with monophonic streams
-    metrics_b = mir_eval.multipitch.evaluate(ref_time, ref_b, est_time, est_b)
-
-    metrics_s["FScore"] = 2*(metrics_s["Precision"]*metrics_s["Recall"])/(metrics_s["Precision"]+metrics_s["Recall"])
-    metrics_a["FScore"] = 2 * (metrics_a["Precision"] * metrics_a["Recall"]) / (metrics_a["Precision"] + metrics_a["Recall"])
-    metrics_t["FScore"] = 2 * (metrics_t["Precision"] * metrics_t["Recall"]) / (metrics_t["Precision"] + metrics_t["Recall"])
-    metrics_b["FScore"] = 2 * (metrics_b["Precision"] * metrics_b["Recall"]) / (metrics_b["Precision"] + metrics_b["Recall"])
-    print(
-        2 * (metrics_s["Precision"] * metrics_s["Recall"]) / (metrics_s["Precision"] + metrics_s["Recall"]),
-        2 * (metrics_a["Precision"] * metrics_a["Recall"]) / (metrics_a["Precision"] + metrics_a["Recall"]),
-        2 * (metrics_t["Precision"] * metrics_t["Recall"]) / (metrics_t["Precision"] + metrics_t["Recall"]),
-        2 * (metrics_b["Precision"] * metrics_b["Recall"]) / (metrics_b["Precision"] + metrics_b["Recall"])
-    )
+    return predictions
 
 
-    metrics_s["track"] = salience_file
-    metrics_a["track"] = salience_file
-    metrics_t["track"] = salience_file
-    metrics_b["track"] = salience_file
+def main(args):
 
-    all_metrics_s.append(metrics_s)
-    all_metrics_a.append(metrics_a)
-    all_metrics_t.append(metrics_t)
-    all_metrics_b.append(metrics_b)
+    if args.model == "voas_cnn":
+        thresholds = [0.1, 0.3, 0.4, 0.4]
+        model = models.voasCNN(PATCH_LEN)
+        model.load_weights("./models/voas_cnn.h5")
 
-pd.DataFrame(all_metrics_s).to_csv("bsq_voasclstm_degraded_soprano.csv", index=False)
-pd.DataFrame(all_metrics_a).to_csv("bsq_voasclstm_degraded_alto.csv", index=False)
-pd.DataFrame(all_metrics_t).to_csv("bsq_voasclstm_degraded_tenor.csv", index=False)
-pd.DataFrame(all_metrics_b).to_csv("bsq_voasclstm_degraded_bass.csv", index=False)
+    elif args.model == "voas_clstm":
+        thresholds = [0.1, 0.3, 0.4, 0.5]
+        model = models.voasConvLSTM(PATCH_LEN)
+        model.load_weights("./models/voas_clstm.h5")
 
+    else:
+        print("Please provide a valid model: `voas_cnn` or `voas_clstm`")
+
+
+
+    if args.saliencefolder != 0:
+
+        salience_folder = args.saliencefolder
+
+        for salience_file in os.listdir(salience_folder):
+            if not salience_file.endswith("npy"): continue
+
+            salience = load_salience_function(salience_file)
+            predictions = predict_one_file(model, salience, thresholds)
+
+            if args.outputpath != "0":
+                output_folder = args.outputpath
+                pd.DataFrame(predictions).to_csv(
+                    os.path.join(output_folder, "{}".format(salience_file.replace("npy", "csv"))), header=False, index=False, index_label=False
+                )
+
+            else:
+                pd.DataFrame(predictions).to_csv(
+                    os.path.join(salience_folder, "{}".format(salience_file.replace("npy", "csv"))), header=False,
+                                 index=False, index_label=False
+                )
+
+    else:
+        salience_file = args.saliencefile
+        basename = os.path.basename(salience_file)
+        salience = load_salience_function(salience_file)
+        predictions = predict_one_file(model, salience, thresholds)
+
+        if args.outputpath != "0":
+            output_folder = args.outputpath
+
+            pd.DataFrame(predictions).to_csv(
+                os.path.join(output_folder, "{}".format(basename.replace("npy", "csv"))), header=False, index=False,
+                             index_label=False
+            )
+        else:
+            pd.DataFrame(predictions).to_csv(
+                os.path.join(salience_file.replace("npy", "csv")), header=False, index=False, index_label=False
+            )
+
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Predict F0 contours given an input polyphonic pitch salience function.")
+
+    parser.add_argument("--model",
+                        dest='model',
+                        type=str,
+                        help="Model to use for prediction: voas_clstm | voas_cnn")
+
+    parser.add_argument("--saliencefile",
+                        #dest='data_splits',
+                        type=str,
+                        default=0,
+                        help="Path to the input salience file. It expects a npy fils.")
+
+    parser.add_argument("--saliencefolder",
+                        type=str,
+                        default=0,
+                        help="Path to the folder with salience files.")
+
+    parser.add_argument("--extension",
+                        type=str,
+                        default="wav",
+                        help="Audio format extension. Defaults to wav.")
+
+
+    parser.add_argument("--outputpath",
+                        type=str,
+                        default="0",
+                        help="Path to the folder to store the results. If nothing is provided, results will be stored in the same folder of the input(s).")
+    main(parser.parse_args())
