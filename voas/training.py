@@ -172,12 +172,16 @@ def train(model_type, name, data_splits, patch_len, epochs, batch_size, steps_ep
     ## optimize threshold
     print("Optimizing threshold on the validation set...")
     # optimal_thresh = opt_thresh.optimize_threshold_full(data_splits["validate"], patch_len, testing_model, name, mode)
+
     optimal_thresholds = opt_thresh.optimize_threshold_individual(data_splits["validate"], patch_len, model, name, mode)
+
     # optimal_thresholds = [0.1, 0.3, 0.4, 0.4]
 
     ## evaluation on test set
     print("Evaluation on the test set...")
+
     evaluate.evaluate_full_individual(data_splits["test"], model, patch_len, name, optimal_thresholds, mode)
+
     # evaluate.evaluate_full(data_splits["test"], testing_model, patch_len, name, optimal_thresholds, mode)
 
 
