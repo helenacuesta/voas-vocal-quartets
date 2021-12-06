@@ -10,7 +10,7 @@ RANDOM_STATE = 22
 
 def main(args):
 
-    '''Pipeline for training LSTM for VoAs
+    '''Pipeline for training models for voice assignment
     '''
 
     model_name = args.model_name
@@ -27,7 +27,7 @@ def main(args):
 
     model_type = args.model
 
-    if model_type in ["voas_clstm_reverse", "voas_clstm_reverse_1d", "voas_cnn", "voas_cnn_small"]:
+    if model_type in ["voas_clstm", "voas_cnn"]:
         mode = "freq"
     else:
         mode = "time"
@@ -35,23 +35,6 @@ def main(args):
     # create data splits
     # data_splits = utils.create_data_split(config.songs, data_splits_path)
     # print("Data splits created to {}".format(data_splits_path))
-
-    # if args.model == 'lstm':
-    #     # create model
-    #     model = models.lstm(config.max_phr_len(patch_len), lstm_size=args.lstm_units)
-    #
-    # elif args.model == 'conv_lstm':
-    #     # create model
-    #     model = models.conv_lstm(config.max_phr_len(patch_len), lstm_size=args.lstm_units)
-    #
-    # elif args.model == "conv_lstm_new":
-    #     model = models.convLSTM(config.max_phr_len(patch_len))
-    #
-    # elif args.model == "resnet_conv":
-    #     model = models.pretrained_resnet_conv(config.max_phr_len(patch_len))
-    #
-    # else:
-    #     raise ValueError("Please specify a valid model: lstm | conv_lstm")
 
 
 
@@ -64,12 +47,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Train an LSTM with num_units units for Voice Assignment.")
+        description="Train VoasCNN or VoasCLSTM for voice assignment of vocal quartets.")
 
     parser.add_argument("--model",
                         dest='model',
                         type=str,
-                        help="Model to train: lstm | conv_lstm | conv_lstm_new | voas_cnn")
+                        help="Model to train: voas_clstm | voas_cnn")
 
     parser.add_argument("--name",
                         dest='model_name',
@@ -85,12 +68,6 @@ if __name__ == "__main__":
                         dest="patch_len",
                         type=int,
                         help="Input patch length.")
-
-    parser.add_argument("--lstm-units",
-                        dest='lstm_units',
-                        type=int,
-                        default=32,
-                        help="Number of LSTM units in each layer. Defaults to 32.")
 
     parser.add_argument("--epochs",
                         dest="num_epochs",
