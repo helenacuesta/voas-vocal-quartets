@@ -1,10 +1,7 @@
 import numpy as np
 import pandas as pd
 
-import mir_eval
-
 import os
-import glob
 import argparse
 
 from voas import utils as utils
@@ -91,131 +88,6 @@ def load_salience_function(path_to_salience):
     salience = np.load(path_to_salience)
 
     return salience
-
-def load_mf0_reference(path_to_mf0):
-
-    mf0 = pd.read_csv(path_to_mf0, header=None, index_col=False).values
-
-    median_vals = np.median(mf0[:, 1:], axis=0)
-    sorted_args = np.argsort(median_vals)
-
-    timebase = mf0[:, 0]
-    ref_b_ = list(mf0[:, sorted_args[0]+1])
-    ref_t_ = list(mf0[:, sorted_args[1]+1])
-    ref_a_ = list(mf0[:, sorted_args[2]+1])
-    ref_s_ = list(mf0[:, sorted_args[3]+1])
-
-    ref_b = []
-    for row in ref_b_: ref_b.append(np.array([row]))
-
-    ref_t = []
-    for row in ref_t_: ref_t.append(np.array([row]))
-
-    ref_a = []
-    for row in ref_a_: ref_a.append(np.array([row]))
-
-    ref_s = []
-    for row in ref_s_: ref_s.append(np.array([row]))
-
-
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(timebase, ref_b)):
-        if fqs == 0:
-            ref_b[i] = np.array([])
-
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(timebase, ref_t)):
-        if fqs==0:
-            ref_t[i] = np.array([])
-
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(timebase, ref_a)):
-        if fqs == 0:
-            ref_a[i] = np.array([])
-
-    # get rid of zeros in prediction for input to mir_eval
-    for i, (tms, fqs) in enumerate(zip(timebase, ref_s)):
-        if fqs == 0:
-            ref_s[i] = np.array([])
-
-    # we return SATB
-    return timebase, ref_s, ref_a, ref_t, ref_b, mf0
-
-
-
-'''Evaluation on BSQ
-'''
-sal_dir = './data/BQ/'
-mf0_ref_dir = './data/BQ/groundtruth'
-
-salience_files = glob.glob(os.path.join(sal_dir, "*.npy"))
-ref_files = glob.glob(os.path.join(mf0_ref_dir, "*.csv"))
-
-all_metrics_s = []
-all_metrics_a = []
-all_metrics_t = []
-all_metrics_b = []
-
-for salience_file in salience_files:
-
-
-
-
-    mode = "freq"
-
-    voascnn = models.voasConvLSTM(PATCH_LEN)
-    voascnn.load_weights("./models/voas_clstm.h5")
-
-    if mode == "time":
-        est_saliences = predict_one_example(salience, voascnn, mode)
-
-    else:
-        est_saliences = predict_one_example(salience, voascnn, mode)
-
-
-    # thresh=[0.1, 0.3, 0.4, 0.5]
-    thresh = [0.36, 0.37, 0.38, 0.41]
-
-    timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresh[0])
-    _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresh[1])
-    _, ten = utils.pitch_activations_to_mf0(est_saliences[2], thresh=thresh[2])
-    _, bas = utils.pitch_activations_to_mf0(est_saliences[3], thresh=thresh[3])
-
-    # construct the multi-pitch predictions
-    predictions = np.zeros([len(timestamp), 5])
-
-
-    min_vals = [
-        np.min(sop[np.where(sop>0)[0]]), np.min(alt[np.where(alt>0)[0]]), np.min(ten[np.where(ten>0)[0]]), np.min(bas[np.where(bas>0)[0]])
-    ]
-    sorted_args = np.argsort(min_vals)
-
-    predictions[:, 0] = timestamp
-    predictions[:, 1] = sop
-    predictions[:, 2] = alt
-    predictions[:, 3] = ten
-    predictions[:, 4] = bas
-
-
-    # max_vals = np.median(predictions[:, 1:], axis=0)
-    # sorted_args = np.argsort(max_vals)
-
-
-    est_time = predictions[:, 0]
-
-    est_s_ = list(predictions[:, 1])
-    est_a_ = list(predictions[:, 2])
-    est_t_ = list(predictions[:, 3])
-    est_b_ = list(predictions[:, 4])
-
-    est_b = []
-    for row in est_b_: est_b.append(np.array([row]))
-    est_t = []
-    for row in est_t_: est_t.append(np.array([row]))
-    est_a = []
-    for row in est_a_: est_a.append(np.array([row]))
-    est_s = []
-    for row in est_s_: est_s.append(np.array([row]))
 
 
 def predict_one_file(model, salience, thresholds):
