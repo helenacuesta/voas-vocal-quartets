@@ -852,5 +852,5 @@ def evaluate_full_individual(test_files, model, patch_len, exp_name, thresh, mod
             raise ValueError("Wrong mode")
 
 
-    pd.DataFrame(all_metrics).to_csv("{}_{}_all_scores_individual_opt_multipitch.csv".format(exp_name, 'testset'))
+    pd.DataFrame(all_metrics).to_csv("{}_{}_all_scores_individual_opt_multipitch_oa.csv".format(exp_name, 'testset'))
 

@@ -11,176 +11,6 @@ from voas import utils as utils
 from voas import config as config
 
 
-def optimize_threshold(validation_files, model, exp_name, mode):
-    '''Optimize detection threshold on the validation set according to multi-pitch metrics.
-    We select one single threshold for all voices
-    '''
-    for song in validation_files:
-
-        ## parse chunks
-        list_of_chunks = sorted(
-            glob.glob(os.path.join(config.feats_dir, "segmented", "{}_mix_*.csv".format(song)))
-        )
-        chunk_idx = np.arange(len(list_of_chunks))
-
-        for idx in chunk_idx:
-
-
-            ## load targets and convert to pitch
-
-            ref_times_s , ref_freqs_s = utils.pitch_activations_to_mf0(
-                pd.read_csv(
-                    os.path.join(config.feats_dir, "segmented", "{}_S_{}.csv".format(song, idx),
-                                 ), header=None, index_col=False
-                ).values.transpose(), thresh=0.9
-            )
-
-            ref_times_a, ref_freqs_a = utils.pitch_activations_to_mf0(
-                pd.read_csv(
-                    os.path.join(config.feats_dir, "segmented", "{}_A_{}.csv".format(song, idx),
-                                 ), header=None, index_col = False
-                ).values.transpose(), thresh=0.9
-            )
-
-            ref_times_t, ref_freqs_t = utils.pitch_activations_to_mf0(
-                pd.read_csv(
-                    os.path.join(config.feats_dir, "segmented", "{}_T_{}.csv".format(song, idx)
-                                 ), header=None, index_col=False
-                ).values.transpose(), thresh=0.9
-            )
-
-            ref_times_b, ref_freqs_b = utils.pitch_activations_to_mf0(
-                pd.read_csv(
-                    os.path.join(config.feats_dir, "segmented", "{}_B_{}.csv".format(song, idx),
-                                 ), header=None, index_col=False
-                ).values.transpose(), thresh=0.9
-            )
-
-            # construct the multi-pitch reference
-
-            reference = np.zeros([len(ref_times_s), 5])
-            reference[:, 0] = ref_times_s
-            reference[:, 1] = ref_freqs_s
-            reference[:, 2] = ref_freqs_a
-            reference[:, 3] = ref_freqs_t
-            reference[:, 4] = ref_freqs_b
-
-            ref_times, ref_freqs = reference[:, 0], list(reference[:, 1:])
-
-            # get rid of zeros in prediction for input to mir_eval
-            for i, (tms, fqs) in enumerate(zip(ref_times, ref_freqs)):
-                if any(fqs == 0):
-                    ref_freqs[i] = np.array([f for f in fqs if f > 0])
-
-            # load input representation
-
-            if mode == "time":
-
-                input_mat = pd.read_csv(
-                    os.path.join(config.feats_dir, "segmented", "{}_mix_{}.csv".format(song, idx)
-                                 ), header=None, index_col=False
-                ).values
-
-                # print("Shape of input mat for validation: {}".format(input_mat.shape))
-
-
-                prediction_mat = utils.get_single_chunk_prediction(model, input_mat[np.newaxis, :, :, np.newaxis, np.newaxis])
-
-            elif mode == "freq":
-
-                input_mat = pd.read_csv(
-                    os.path.join(config.feats_dir, "segmented", "{}_mix_{}.csv".format(song, idx)
-                                 ), header=None, index_col=False
-                ).values.transpose()
-
-                # print("Shape of input mat for validation: {}".format(input_mat.shape))
-
-                prediction_mat = utils.get_single_chunk_prediction(model, input_mat[np.newaxis, :, :, np.newaxis])
-
-            # np.save(os.path.join("/homedtic/hcuesta/workspace/VoiceAssignment/data/results", "{}_{}.npy".format(song, idx)), prediction_mat)
-
-            thresh_vals = np.arange(0.1, 1.0, 0.1)
-            thresh_scores = {t: [] for t in thresh_vals}
-
-            if mode == "time":
-
-                for thresh in thresh_vals:
-
-                    timestamp, sop = utils.pitch_activations_to_mf0(prediction_mat['sop'][0,:,:,0].transpose(), thresh=thresh)
-                    _, alt = utils.pitch_activations_to_mf0(prediction_mat['alt'][0,:,:,0].transpose(), thresh=thresh)
-                    _, ten = utils.pitch_activations_to_mf0(prediction_mat['ten'][0,:,:,0].transpose(), thresh=thresh)
-                    _, bas = utils.pitch_activations_to_mf0(prediction_mat['bas'][0,:,:,0].transpose(), thresh=thresh)
-
-                    # construct the multi-pitch predictions
-                    predictions = np.zeros([len(timestamp), 5])
-                    predictions[:, 0] = timestamp
-                    predictions[:, 1] = sop
-                    predictions[:, 2] = alt
-                    predictions[:, 3] = ten
-                    predictions[:, 4] = bas
-
-                    est_times, est_freqs = predictions[:, 0], list(predictions[:, 1:])
-
-                    # get rid of zeros in prediction for input to mir_eval
-                    for i, (tms, fqs) in enumerate(zip(est_times, est_freqs)):
-                        if any(fqs == 0):
-                            est_freqs[i] = np.array([f for f in fqs if f > 0])
-
-
-                    metrics = mir_eval.multipitch.evaluate(ref_times, ref_freqs, est_times, est_freqs, max_freq=9000.0)
-                    thresh_scores[thresh].append(metrics['Accuracy'])
-
-            elif mode == "freq":
-
-                for thresh in thresh_vals:
-
-                    timestamp, sop = utils.pitch_activations_to_mf0(prediction_mat['sop'][0, :, :, 0],
-                                                                    thresh=thresh)
-                    _, alt = utils.pitch_activations_to_mf0(prediction_mat['alt'][0, :, :, 0],
-                                                            thresh=thresh)
-                    _, ten = utils.pitch_activations_to_mf0(prediction_mat['ten'][0, :, :, 0],
-                                                            thresh=thresh)
-                    _, bas = utils.pitch_activations_to_mf0(prediction_mat['bas'][0, :, :, 0],
-                                                            thresh=thresh)
-
-                    # construct the multi-pitch predictions
-                    predictions = np.zeros([len(timestamp), 5])
-                    predictions[:, 0] = timestamp
-                    predictions[:, 1] = sop
-                    predictions[:, 2] = alt
-                    predictions[:, 3] = ten
-                    predictions[:, 4] = bas
-
-                    est_times, est_freqs = predictions[:, 0], list(predictions[:, 1:])
-
-                    # get rid of zeros in prediction for input to mir_eval
-                    for i, (tms, fqs) in enumerate(zip(est_times, est_freqs)):
-                        if any(fqs == 0):
-                            est_freqs[i] = np.array([f for f in fqs if f > 0])
-
-                    metrics = mir_eval.multipitch.evaluate(ref_times, ref_freqs, est_times, est_freqs, max_freq=9000.0)
-                    thresh_scores[thresh].append(metrics['Accuracy'])
-
-            else:
-                raise ValueError("Incorrect mode")
-
-
-
-    avg_thresh = [np.mean(thresh_scores[t]) for t in thresh_vals]
-    best_thresh = thresh_vals[np.argmax(avg_thresh)]
-    print("Best threshold is {}".format(best_thresh))
-
-    try:
-        with open("{}_threshold.csv".format(exp_name), "w") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Best threshold for joint optimization of all voices is: {}".format(best_thresh)])
-
-    except:
-        print("Best threshold is {}".format(best_thresh))
-
-
-    return best_thresh
-
 def optimize_threshold_full(validation_files, patch_len, model, exp_name, mode):
     '''Optimize detection threshold on the validation set according to multi-pitch metrics.
     We select one single threshold for all voices
@@ -247,7 +77,6 @@ def optimize_threshold_full(validation_files, patch_len, model, exp_name, mode):
 
                 # input_mat = mat_mix
                 rearr_input = []
-                pred_s, pred_a, pred_t, pred_b = [], [], [], []
 
                 for idx in start_idx:
                     rearr_input.append(mat_mix[:, idx:idx+patch_len, np.newaxis])
@@ -438,8 +267,8 @@ def optimize_threshold_full(validation_files, patch_len, model, exp_name, mode):
 
 
 def optimize_threshold_individual(validation_files, patch_len, model, exp_name, mode):
-    '''Optimize detection threshold on the validation set according to multi-pitch metrics.
-    We select one single threshold for all voices
+    '''Optimize detection threshold on the validation set for each voice individually.
+    The chosen thresholds maximize the overall accuracy for each voice.
     '''
     for song in validation_files:
 
@@ -573,10 +402,10 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
                 metrics_ten = mir_eval.melody.evaluate(ref_times_t, ref_freqs_t, timestamp, ten)
                 metrics_bass = mir_eval.melody.evaluate(ref_times_b, ref_freqs_b, timestamp, bas)
 
-                thresh_scores_sop[thresh].append(metrics_sop['Raw Pitch Accuracy'])
-                thresh_scores_alt[thresh].append(metrics_alt['Raw Pitch Accuracy'])
-                thresh_scores_ten[thresh].append(metrics_ten['Raw Pitch Accuracy'])
-                thresh_scores_bass[thresh].append(metrics_bass['Raw Pitch Accuracy'])
+                thresh_scores_sop[thresh].append(metrics_sop['Overall Accuracy'])
+                thresh_scores_alt[thresh].append(metrics_alt['Overall Accuracy'])
+                thresh_scores_ten[thresh].append(metrics_ten['Overall Accuracy'])
+                thresh_scores_bass[thresh].append(metrics_bass['Overall Accuracy'])
 
             avg_thresh_sop = [np.mean(thresh_scores_sop[t]) for t in thresh_vals]
             avg_thresh_alt = [np.mean(thresh_scores_alt[t]) for t in thresh_vals]
@@ -588,7 +417,7 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
             best_thresh_ten = thresh_vals[np.argmax(avg_thresh_ten)]
             best_thresh_bass = thresh_vals[np.argmax(avg_thresh_bass)]
 
-            with open("{}_threshold.csv".format(exp_name), "w") as f:
+            with open("{}_threshold_oa.csv".format(exp_name), "w") as f:
                 writer = csv.writer(f)
                 writer.writerow([
                     "Best thresholds for separate optimizations of all voices are: S={}, A={}, T={}, B={}".format(
@@ -687,10 +516,10 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
                 metrics_ten = mir_eval.melody.evaluate(ref_times_t, ref_freqs_t, timestamp, ten)
                 metrics_bass = mir_eval.melody.evaluate(ref_times_b, ref_freqs_b, timestamp, bas)
 
-                thresh_scores_sop[thresh].append(metrics_sop['Raw Pitch Accuracy'])
-                thresh_scores_alt[thresh].append(metrics_alt['Raw Pitch Accuracy'])
-                thresh_scores_ten[thresh].append(metrics_ten['Raw Pitch Accuracy'])
-                thresh_scores_bass[thresh].append(metrics_bass['Raw Pitch Accuracy'])
+                thresh_scores_sop[thresh].append(metrics_sop['Overall Accuracy'])
+                thresh_scores_alt[thresh].append(metrics_alt['Overall Accuracy'])
+                thresh_scores_ten[thresh].append(metrics_ten['Overall Accuracy'])
+                thresh_scores_bass[thresh].append(metrics_bass['Overall Accuracy'])
 
             avg_thresh_sop = [np.mean(thresh_scores_sop[t]) for t in thresh_vals]
             avg_thresh_alt = [np.mean(thresh_scores_alt[t]) for t in thresh_vals]
@@ -702,7 +531,7 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
             best_thresh_ten = thresh_vals[np.argmax(avg_thresh_ten)]
             best_thresh_bass = thresh_vals[np.argmax(avg_thresh_bass)]
 
-            with open("{}_threshold.csv".format(exp_name), "w") as f:
+            with open("{}_threshold_oa.csv".format(exp_name), "w") as f:
                 writer = csv.writer(f)
                 writer.writerow([
                     "Best thresholds for separate optimizations of all voices are: S={}, A={}, T={}, B={}".format(
