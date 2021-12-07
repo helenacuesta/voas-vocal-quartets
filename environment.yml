@@ -163,4 +163,3 @@ dependencies:
     - widgetsnbextension==3.5.1
     - wrapt==1.12.1
     - zipp==3.1.0
-prefix: /Users/helenacuesta/anaconda3/envs/mf0
