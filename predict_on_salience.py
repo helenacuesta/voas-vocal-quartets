@@ -3,6 +3,7 @@ import pandas as pd
 
 import os
 import argparse
+import sys
 
 from voas import utils as utils
 from voas import config as config
@@ -124,8 +125,7 @@ def main(args):
         model.load_weights("./models/voas_clstm.h5")
 
     else:
-        print("Please provide a valid model: `voas_cnn` or `voas_clstm`")
-
+        sys.exit("Please provide a valid model. Expected `voas_cnn` or `voas_clstm`.")
 
 
     if args.saliencefolder != 0:
@@ -181,7 +181,6 @@ if __name__ == "__main__":
                         help="Model to use for prediction: voas_clstm | voas_cnn")
 
     parser.add_argument("--saliencefile",
-                        #dest='data_splits',
                         type=str,
                         default=0,
                         help="Path to the input salience file. It expects a npy fils.")
@@ -190,12 +189,6 @@ if __name__ == "__main__":
                         type=str,
                         default=0,
                         help="Path to the folder with salience files.")
-
-    parser.add_argument("--extension",
-                        type=str,
-                        default="wav",
-                        help="Audio format extension. Defaults to wav.")
-
 
     parser.add_argument("--outputpath",
                         type=str,
