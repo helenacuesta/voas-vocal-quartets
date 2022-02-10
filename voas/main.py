@@ -27,10 +27,8 @@ def main(args):
 
     model_type = args.model
 
-    if model_type in ["voas_clstm", "voas_cnn"]:
-        mode = "freq"
-    else:
-        mode = "time"
+    #if model_type in ["voas_clstm", "voas_cnn", "voas_cnn_clean"]:
+
 
     # create data splits
     # data_splits = utils.create_data_split(config.songs, data_splits_path)
@@ -39,9 +37,9 @@ def main(args):
 
 
     # train
-    print("    >> training starts now...")
+    print("[MSG] >>>>> Training starts now...")
 
-    model, history = training.train(model_type, name=model_name, data_splits=data_splits, patch_len=patch_len, epochs=epochs, batch_size=batch_size, steps_epoch=steps_per_epoch, val_steps=val_steps, mode=mode)
+    model, history = training.train(model_type, name=model_name, data_splits=data_splits, patch_len=patch_len, epochs=epochs, batch_size=batch_size, steps_epoch=steps_per_epoch, val_steps=val_steps)
 
 
 

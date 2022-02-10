@@ -95,10 +95,10 @@ def predict_one_file(model, salience, thresholds):
 
     est_saliences = predict_one_example(salience, model, mode="freq")
 
-    timestamp, sop = utils.pitch_activations_to_mf0(est_saliences[0], thresh=thresholds[0])
-    _, alt = utils.pitch_activations_to_mf0(est_saliences[1], thresh=thresholds[1])
-    _, ten = utils.pitch_activations_to_mf0(est_saliences[2], thresh=thresholds[2])
-    _, bas = utils.pitch_activations_to_mf0(est_saliences[3], thresh=thresholds[3])
+    timestamp, sop = utils.pitch_activations_to_mf0_argmax(est_saliences[0], thresh=thresholds[0])
+    _, alt = utils.pitch_activations_to_mf0_argmax(est_saliences[1], thresh=thresholds[1])
+    _, ten = utils.pitch_activations_to_mf0_argmax(est_saliences[2], thresh=thresholds[2])
+    _, bas = utils.pitch_activations_to_mf0_argmax(est_saliences[3], thresh=thresholds[3])
 
     # construct the multi-pitch predictions
     predictions = np.zeros([len(timestamp), 5])
@@ -109,18 +109,18 @@ def predict_one_file(model, salience, thresholds):
     predictions[:, 3] = ten
     predictions[:, 4] = bas
 
-    return predictions
+    return predictions, est_saliences
 
 
 def main(args):
 
     if args.model == "voas_cnn":
-        thresholds = [0.1, 0.3, 0.4, 0.4]
+        thresholds = [0.23, 0.17, 0.15, 0.17]
         model = models.voasCNN(PATCH_LEN)
         model.load_weights("./models/voas_cnn.h5")
 
     elif args.model == "voas_clstm":
-        thresholds = [0.1, 0.3, 0.4, 0.5]
+        thresholds = [0.29, 0.20, 0.17, 0.23]
         model = models.voasConvLSTM(PATCH_LEN)
         model.load_weights("./models/voas_clstm.h5")
 
@@ -136,7 +136,7 @@ def main(args):
             if not salience_file.endswith("npy"): continue
 
             salience = load_salience_function(salience_file)
-            predictions = predict_one_file(model, salience, thresholds)
+            predictions, _ = predict_one_file(model, salience, thresholds)
 
             if args.outputpath != "0":
                 output_folder = args.outputpath
@@ -154,7 +154,7 @@ def main(args):
         salience_file = args.saliencefile
         basename = os.path.basename(salience_file)
         salience = load_salience_function(salience_file)
-        predictions = predict_one_file(model, salience, thresholds)
+        predictions, est_saliences = predict_one_file(model, salience, thresholds)
 
         if args.outputpath != "0":
             output_folder = args.outputpath
@@ -163,10 +163,22 @@ def main(args):
                 os.path.join(output_folder, "{}".format(basename.replace("npy", "csv"))), header=False, index=False,
                              index_label=False
             )
+
+            np.save(os.path.join(output_folder, "{}".format(basename.replace(".npy", "_s.npy"))), est_saliences[0])
+            np.save(os.path.join(output_folder, "{}".format(basename.replace(".npy", "_a.npy"))), est_saliences[1])
+            np.save(os.path.join(output_folder, "{}".format(basename.replace(".npy", "_t.npy"))), est_saliences[2])
+            np.save(os.path.join(output_folder, "{}".format(basename.replace(".npy", "_b.npy"))), est_saliences[3])
+
+
+
         else:
             pd.DataFrame(predictions).to_csv(
                 os.path.join(salience_file.replace("npy", "csv")), header=False, index=False, index_label=False
             )
+            np.save(salience_file.replace(".npy", "_s.npy"), est_saliences[0])
+            np.save(salience_file.replace(".npy", "_a.npy"), est_saliences[0])
+            np.save(salience_file.replace(".npy", "_t.npy"), est_saliences[2])
+            np.save(salience_file.replace(".npy", "_b.npy"), est_saliences[3])
 
 
 
@@ -183,7 +195,7 @@ if __name__ == "__main__":
     parser.add_argument("--saliencefile",
                         type=str,
                         default=0,
-                        help="Path to the input salience file. It expects a npy fils.")
+                        help="Path to the input salience file. It expects a npy file.")
 
     parser.add_argument("--saliencefolder",
                         type=str,

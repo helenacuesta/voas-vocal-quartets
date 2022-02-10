@@ -1,10 +1,15 @@
 import os
 
-scores_dir = '../data/rawScores'
-feats_dir = '../data/feats'
-midis_dir = '../data/midis'
-plots_dir = '../data/plots'
-models_dir = '../models'
+scores_dir = './data/rawScores'
+feats_dir = './data/feats'
+midis_dir = './data/midis'
+plots_dir = './data/plots'
+models_dir = './models'
+# scores_dir = './data/rawScores'
+# feats_dir = './data/feats'
+# midis_dir = './data/midis'
+# plots_dir = './data/plots'
+# models_dir = './models'
 
 # scores_dir = '/Users/helenacuesta/Desktop/MTG/datasets/VoiceAssignmentScores'
 # feats_dir = '/Users/helenacuesta/Desktop/MTG/datasets/VoiceAssignmentScores/feats'

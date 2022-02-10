@@ -266,7 +266,8 @@ def optimize_threshold_full(validation_files, patch_len, model, exp_name, mode):
     return best_thresh
 
 
-def optimize_threshold_individual(validation_files, patch_len, model, exp_name, mode):
+def optimize_threshold_individual(validation_files, patch_len, model, exp_name):
+
     '''Optimize detection threshold on the validation set for each voice individually.
     The chosen thresholds maximize the overall accuracy for each voice.
     '''
@@ -334,9 +335,7 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
 
 
 
-        # input_mat = mat_mix
         rearr_input = []
-        pred_s, pred_a, pred_t, pred_b = [], [], [], []
 
         for idx in start_idx:
             rearr_input.append(mat_mix[:, idx:idx+patch_len, np.newaxis])
@@ -360,31 +359,18 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
         mat_B = mat_B[:, :num_frames_pred]
 
         ## convert reference mats to pitches
-        ref_times_s, ref_freqs_s = utils.pitch_activations_to_mf0(mat_S, thresh=0.9)
+        ref_times_s, ref_freqs_s = utils.pitch_activations_to_mf0_argmax(mat_S, thresh=0.9)
 
-        ref_times_a, ref_freqs_a = utils.pitch_activations_to_mf0(mat_A, thresh=0.9)
+        ref_times_a, ref_freqs_a = utils.pitch_activations_to_mf0_argmax(mat_A, thresh=0.9)
 
-        ref_times_t, ref_freqs_t = utils.pitch_activations_to_mf0(mat_T, thresh=0.9)
+        ref_times_t, ref_freqs_t = utils.pitch_activations_to_mf0_argmax(mat_T, thresh=0.9)
 
-        ref_times_b, ref_freqs_b = utils.pitch_activations_to_mf0(mat_B, thresh=0.9)
+        ref_times_b, ref_freqs_b = utils.pitch_activations_to_mf0_argmax(mat_B, thresh=0.9)
+
 
         del mat_S, mat_A, mat_T, mat_B
 
-        # construct the multi-pitch reference
-
-        # reference = np.zeros([len(ref_times_s), 5])
-        # reference[:, 0] = ref_times_s
-        # reference[:, 1] = ref_freqs_s
-        # reference[:, 2] = ref_freqs_a
-        # reference[:, 3] = ref_freqs_t
-        # reference[:, 4] = ref_freqs_b
-        #
-        # ref_times, ref_freqs = reference[:, 0], list(reference[:, 1:])
-        #
-        # # get rid of zeros in prediction for input to mir_eval
-        # for i, (tms, fqs) in enumerate(zip(ref_times, ref_freqs)):
-        #     if any(fqs == 0):
-        #         ref_freqs[i] = np.array([f for f in fqs if f > 0])
+        ## define possible thresholds
 
         thresh_vals = np.arange(0.1, 1.0, 0.1)
         thresh_scores_sop = {t: [] for t in thresh_vals}
@@ -392,16 +378,14 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
         thresh_scores_ten = {t: [] for t in thresh_vals}
         thresh_scores_bass = {t: [] for t in thresh_vals}
 
-        print("Threshold optimization starts now...")
+        # print("Threshold optimization starts now...")
 
         for thresh in thresh_vals:
 
-            # print("Testing with thresh={}".format(thresh))
-
-            timestamp, sop = utils.pitch_activations_to_mf0(pred_s, thresh=thresh)
-            _, alt = utils.pitch_activations_to_mf0(pred_a, thresh=thresh)
-            _, ten = utils.pitch_activations_to_mf0(pred_t, thresh=thresh)
-            _, bas = utils.pitch_activations_to_mf0(pred_b, thresh=thresh)
+            timestamp, sop = utils.pitch_activations_to_mf0_argmax(pred_s, thresh=thresh)
+            _, alt = utils.pitch_activations_to_mf0_argmax(pred_a, thresh=thresh)
+            _, ten = utils.pitch_activations_to_mf0_argmax(pred_t, thresh=thresh)
+            _, bas = utils.pitch_activations_to_mf0_argmax(pred_b, thresh=thresh)
 
             metrics_sop = mir_eval.melody.evaluate(ref_times_s, ref_freqs_s, timestamp, sop)
             metrics_alt = mir_eval.melody.evaluate(ref_times_a, ref_freqs_a, timestamp, alt)
@@ -412,6 +396,7 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
             thresh_scores_alt[thresh].append(metrics_alt['Overall Accuracy'])
             thresh_scores_ten[thresh].append(metrics_ten['Overall Accuracy'])
             thresh_scores_bass[thresh].append(metrics_bass['Overall Accuracy'])
+
 
         avg_thresh_sop = [np.mean(thresh_scores_sop[t]) for t in thresh_vals]
         avg_thresh_alt = [np.mean(thresh_scores_alt[t]) for t in thresh_vals]
@@ -424,6 +409,7 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
         best_thresh_bass.append(thresh_vals[np.argmax(avg_thresh_bass)])
 
 
+
     best_thresh_sop = np.mean(best_thresh_sop)
     best_thresh_alt = np.mean(best_thresh_alt)
     best_thresh_ten = np.mean(best_thresh_ten)
@@ -432,137 +418,14 @@ def optimize_threshold_individual(validation_files, patch_len, model, exp_name, 
     with open("{}_threshold_oa.csv".format(exp_name), "w") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "Best thresholds for separate optimizations of all voices are: S={}, A={}, T={}, B={}".format(
+            "Best thresholds (OA-based) for separate optimizations of all voices are: S={}, A={}, T={}, B={}".format(
                 best_thresh_sop,
                 best_thresh_alt,
                 best_thresh_ten,
                 best_thresh_bass
             )])
 
-    print("Best thresholds are {}".format(
+    print("Best thresholds (OA-based) are {}".format(
         [best_thresh_sop, best_thresh_alt, best_thresh_ten, best_thresh_bass]))
 
     return best_thresh_sop, best_thresh_alt, best_thresh_ten, best_thresh_bass
-
-
-
-
-        # elif mode == "time":
-        #
-        #     mat_mix = mat_mix.transpose()
-        #     rearr_input = []
-        #
-        #     for idx in start_idx:
-        #         rearr_input.append(mat_mix[idx:idx+patch_len, :, np.newaxis])
-        #     rearr_input = np.array(rearr_input)
-        #
-        #     del mat_mix
-        #
-        #     prediction_mat = model.predict(rearr_input)
-        #
-        #     pred_s = np.vstack(prediction_mat[0]).transpose()
-        #     pred_a = np.vstack(prediction_mat[1]).transpose()
-        #     pred_t = np.vstack(prediction_mat[2]).transpose()
-        #     pred_b = np.vstack(prediction_mat[3]).transpose()
-        #
-        #     num_frames_pred = pred_s.shape[1]
-        #
-        #     # we're not dealing with the last frame, so we cut the reference here
-        #     mat_S = mat_S[:, :num_frames_pred]
-        #     mat_A = mat_A[:, :num_frames_pred]
-        #     mat_T = mat_T[:, :num_frames_pred]
-        #     mat_B = mat_B[:, :num_frames_pred]
-        #
-        #     ## convert reference mats to pitches
-        #     ref_times_s, ref_freqs_s = utils.pitch_activations_to_mf0(mat_S, thresh=0.9)
-        #
-        #     ref_times_a, ref_freqs_a = utils.pitch_activations_to_mf0(mat_A, thresh=0.9)
-        #
-        #     ref_times_t, ref_freqs_t = utils.pitch_activations_to_mf0(mat_T, thresh=0.9)
-        #
-        #     ref_times_b, ref_freqs_b = utils.pitch_activations_to_mf0(mat_B, thresh=0.9)
-        #
-        #     del mat_S, mat_A, mat_T, mat_B
-        #
-        #     # construct the multi-pitch reference
-        #
-        #     # reference = np.zeros([len(ref_times_s), 5])
-        #     # reference[:, 0] = ref_times_s
-        #     # reference[:, 1] = ref_freqs_s
-        #     # reference[:, 2] = ref_freqs_a
-        #     # reference[:, 3] = ref_freqs_t
-        #     # reference[:, 4] = ref_freqs_b
-        #     #
-        #     # ref_times, ref_freqs = reference[:, 0], list(reference[:, 1:])
-        #     #
-        #     # # get rid of zeros in prediction for input to mir_eval
-        #     # for i, (tms, fqs) in enumerate(zip(ref_times, ref_freqs)):
-        #     #     if any(fqs == 0):
-        #     #         ref_freqs[i] = np.array([f for f in fqs if f > 0])
-        #
-        #     thresh_vals = np.arange(0.1, 1.0, 0.1)
-        #     thresh_scores_sop = {t: [] for t in thresh_vals}
-        #     thresh_scores_alt = {t: [] for t in thresh_vals}
-        #     thresh_scores_ten = {t: [] for t in thresh_vals}
-        #     thresh_scores_bass = {t: [] for t in thresh_vals}
-        #
-        #     print("Threshold optimization starts now...")
-        #
-        #     for thresh in thresh_vals:
-        #
-        #         # print("Testing with thresh={}".format(thresh))
-        #
-        #         timestamp, sop = utils.pitch_activations_to_mf0(pred_s, thresh=thresh)
-        #         _, alt = utils.pitch_activations_to_mf0(pred_a, thresh=thresh)
-        #         _, ten = utils.pitch_activations_to_mf0(pred_t, thresh=thresh)
-        #         _, bas = utils.pitch_activations_to_mf0(pred_b, thresh=thresh)
-        #
-        #         metrics_sop = mir_eval.melody.evaluate(ref_times_s, ref_freqs_s, timestamp, sop)
-        #         metrics_alt = mir_eval.melody.evaluate(ref_times_a, ref_freqs_a, timestamp, alt)
-        #         metrics_ten = mir_eval.melody.evaluate(ref_times_t, ref_freqs_t, timestamp, ten)
-        #         metrics_bass = mir_eval.melody.evaluate(ref_times_b, ref_freqs_b, timestamp, bas)
-        #
-        #         thresh_scores_sop[thresh].append(metrics_sop['Overall Accuracy'])
-        #         thresh_scores_alt[thresh].append(metrics_alt['Overall Accuracy'])
-        #         thresh_scores_ten[thresh].append(metrics_ten['Overall Accuracy'])
-        #         thresh_scores_bass[thresh].append(metrics_bass['Overall Accuracy'])
-        #
-        #     avg_thresh_sop = [np.mean(thresh_scores_sop[t]) for t in thresh_vals]
-        #     avg_thresh_alt = [np.mean(thresh_scores_alt[t]) for t in thresh_vals]
-        #     avg_thresh_ten = [np.mean(thresh_scores_ten[t]) for t in thresh_vals]
-        #     avg_thresh_bass = [np.mean(thresh_scores_bass[t]) for t in thresh_vals]
-        #
-        #     best_thresh_sop = thresh_vals[np.argmax(avg_thresh_sop)]
-        #     best_thresh_alt = thresh_vals[np.argmax(avg_thresh_alt)]
-        #     best_thresh_ten = thresh_vals[np.argmax(avg_thresh_ten)]
-        #     best_thresh_bass = thresh_vals[np.argmax(avg_thresh_bass)]
-        #
-        #     with open("{}_threshold_oa.csv".format(exp_name), "w") as f:
-        #         writer = csv.writer(f)
-        #         writer.writerow([
-        #             "Best thresholds for separate optimizations of all voices are: S={}, A={}, T={}, B={}".format(
-        #                 best_thresh_sop,
-        #                 best_thresh_alt,
-        #                 best_thresh_ten,
-        #                 best_thresh_bass
-        #             )])
-        #     print("Best thresholds are {}".format(
-        #         [best_thresh_sop, best_thresh_alt, best_thresh_ten, best_thresh_bass]))
-        #
-        #     return best_thresh_sop, best_thresh_alt, best_thresh_ten, best_thresh_bass
-        #
-        #     # except:
-        #     #     print("Best thresholds are {}".format(
-        #     #         [best_thresh_sop, best_thresh_alt, best_thresh_ten, best_thresh_bass]))
-        # else:
-        #     raise ValueError("Wrong mode!")
-
-
-
-
-
-
-
-
-
-

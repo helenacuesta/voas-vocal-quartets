@@ -18,10 +18,6 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 
-
-'''Accepted score formats: MIDI, xml, musicxml, mxl
-'''
-
 def xml2midi(xmlfile, format):
 
     try:
@@ -240,22 +236,46 @@ def pitch_activations_to_mf0(pitch_activation_mat, thresh):
 
         if np.array(f).ndim > 1:
             idx_max = peak_thresh_mat[t, f].argmax()
-            est_freqs[t] = freqs[f[idx]]
+            est_freqs[t] = freqs[f[idx_max]]
 
         else:
             est_freqs[t] = freqs[f]
 
 
-    # est_freqs = [np.array(lst) for lst in est_freqs]
-
     return times.reshape(len(times),), est_freqs.reshape(len(est_freqs),)
+
+def pitch_activations_to_mf0_argmax(pitch_activation_mat, thresh):
+    """Convert pitch activation map to pitch by argmaxing
+    """
+    freqs = get_freq_grid()
+    times = get_time_grid(pitch_activation_mat.shape[1])
+
+    peak_thresh_mat = np.zeros(pitch_activation_mat.shape)
+    peaks = np.argmax(pitch_activation_mat, axis=0)
+    for i in range(peak_thresh_mat.shape[1]):
+        peak_thresh_mat[peaks[i], i] = pitch_activation_mat[peaks[i], i]
+
+    idx = np.where(peak_thresh_mat >= thresh)
+
+    est_freqs = np.zeros(len(times))
+
+    for f, t in zip(idx[0], idx[1]):
+        if f == 0:
+            ## redundant because it has zeros already but making sure
+            est_freqs[t] = 0
+        else:
+            if np.array(f).size > 1:
+                idx_max = peak_thresh_mat[t, f].argmax()
+                est_freqs[t] = freqs[f[idx_max]]
+            else:
+                est_freqs[t] = freqs[f]
+
+    return times, est_freqs
 
 def get_single_chunk_prediction(model, input_mix_mat):
 
     # for now we only deal with the scenario where we have pre-computed features
     # the input should be already a chunk in this function
-
-    #print("[MSG] >>>>> Input shape for prediction is: {}".format(input_mix_mat.shape))
 
     p = model.predict(input_mix_mat, verbose=1)
 

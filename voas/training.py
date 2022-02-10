@@ -41,7 +41,7 @@ def config_callbacks(exp_name):
     return [model_ckp, earlystop, reduce_lr] #tboard, reduce_lr]
 
 
-def train(model_type, name, data_splits, patch_len, epochs, batch_size, steps_epoch, val_steps, mode):
+def train(model_type, name, data_splits, patch_len, epochs, batch_size, steps_epoch, val_steps):
 
     mirrored_strategy = tf.distribute.MirroredStrategy()
     options = tf.data.Options()
@@ -51,72 +51,41 @@ def train(model_type, name, data_splits, patch_len, epochs, batch_size, steps_ep
 
     print("[MSG] >>>>> Instantiating train and validation generators...")
 
-    if mode not in ["time", "freq"]:
-        raise ValueError("Wrong mode. Expected `freq` or `time`, got {}".format(mode))
 
-    # #
-    if mode == "freq":
-
-        train_generator = tf.data.Dataset.from_generator(
-            pescgen.full_generator_pescador,
-            args=(data_splits['train'], "freq", patch_len, batch_size),
-            output_types=(tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)),
-            output_shapes=(tf.TensorShape([None, config.num_features, patch_len, 1]),
-                           (tf.TensorShape([None, config.num_features, patch_len]), tf.TensorShape([None, config.num_features, patch_len]),
-                            tf.TensorShape([None, config.num_features, patch_len]),tf.TensorShape([None, config.num_features, patch_len])
-                            )
-                           )
-        )
+    ## declare generators for train and validations sets
+    train_generator = tf.data.Dataset.from_generator(
+        pescgen.full_generator_pescador,
+        args=(data_splits['train'], "freq", patch_len, batch_size),
+        output_types=(tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)),
+        output_shapes=(tf.TensorShape([None, config.num_features, patch_len, 1]),
+                       (tf.TensorShape([None, config.num_features, patch_len]), tf.TensorShape([None, config.num_features, patch_len]),
+                        tf.TensorShape([None, config.num_features, patch_len]),tf.TensorShape([None, config.num_features, patch_len])
+                        )
+                       )
+    )
 
 
-        val_generator = tf.data.Dataset.from_generator(
-            pescgen.full_generator_pescador,
-            args=(data_splits['validate'], "freq", patch_len, batch_size),
-            output_types=(tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)),
-            output_shapes=(tf.TensorShape([None, config.num_features, patch_len, 1]),
-                           (tf.TensorShape([None, config.num_features, patch_len]), tf.TensorShape([None, config.num_features, patch_len]),
-                            tf.TensorShape([None, config.num_features, patch_len]), tf.TensorShape([None, config.num_features, patch_len])
-                            )
-                           )
-        )
-
-    elif mode == "time":
-
-
-        train_generator = tf.data.Dataset.from_generator(
-            pescgen.full_generator_pescador,
-            args=(data_splits['train'], "time", patch_len, batch_size),
-            output_types=(tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)),
-            output_shapes=(tf.TensorShape([None, patch_len, config.num_features, 1]),
-                           (tf.TensorShape([None, patch_len, config.num_features]), tf.TensorShape([None, patch_len, config.num_features]),
-                            tf.TensorShape([None, patch_len, config.num_features]),tf.TensorShape([None, patch_len, config.num_features])
-                            )
-                           )
-        )
-
-
-        val_generator = tf.data.Dataset.from_generator(
-            pescgen.full_generator_pescador,
-            args=(data_splits['validate'], "time", patch_len, batch_size),
-            output_types=(tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)),
-            output_shapes=(tf.TensorShape([None, patch_len, config.num_features, 1]),
-                           (tf.TensorShape([None, patch_len, config.num_features]), tf.TensorShape([None, patch_len, config.num_features]),
-                            tf.TensorShape([None, patch_len, config.num_features]), tf.TensorShape([None, patch_len, config.num_features])
-                            )
-                           )
-        )
-
+    val_generator = tf.data.Dataset.from_generator(
+        pescgen.full_generator_pescador,
+        args=(data_splits['validate'], "freq", patch_len, batch_size),
+        output_types=(tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)),
+        output_shapes=(tf.TensorShape([None, config.num_features, patch_len, 1]),
+                       (tf.TensorShape([None, config.num_features, patch_len]), tf.TensorShape([None, config.num_features, patch_len]),
+                        tf.TensorShape([None, config.num_features, patch_len]), tf.TensorShape([None, config.num_features, patch_len])
+                        )
+                       )
+    )
 
     callbacks = config_callbacks(name)
 
-    ## build model
+    ## build model with mirrored strategy for parallel gpu training
 
     with mirrored_strategy.scope():
 
         if model_type == "voas_clstm":
             model = models.voasConvLSTM(config.max_phr_len(patch_len))
 
-        elif model_type == "voas_cnn":
+        elif model_type in ["voas_cnn", "voas_cnn_clean"]:
             model = models.voasCNN(config.max_phr_len(patch_len))
 
         else:
@@ -144,47 +113,42 @@ def train(model_type, name, data_splits, patch_len, epochs, batch_size, steps_ep
 
         )
 
-        # skip training, load checkpoint, and save
-        model.load_weights(os.path.join(config.models_dir, 'ckp_{}'.format(name)))
+        # # skip training, load checkpoint, and save
+        # model.load_weights(os.path.join(config.models_dir, 'ckp_{}'.format(name)))
+        #
+        # model.save(
+        #     os.path.join(
+        #         config.models_dir, "{}.h5".format(name)
+        #     )
+        # )
 
-        model.save(
-            os.path.join(
-                config.models_dir, "{}.h5".format(name)
-            )
-        )
+        # # skip training and load trained model
+        # model.load_weights(
+        #     os.path.join(
+        #         config.models_dir, "{}.h5".format(model_type)
+        #     )
+        # )
 
-        # skip training and load trained model
-        model.load_weights(
-            os.path.join(
-                config.models_dir, "{}.h5".format(name)
-            )
-        )
-
-    model.save(
-        os.path.join(
-            config.models_dir, "{}.h5".format(name)
-        )
-    )
+    # model.save(
+    #     os.path.join(
+    #         config.models_dir, "{}.h5".format(name)
+    #     )
+    # )
     # history = 0
 
-    with open(os.path.join(config.models_dir, name), 'wb') as file_pi:
-        pickle.dump(history.history, file_pi)
+    # with open(os.path.join(config.models_dir, name), 'wb') as file_pi:
+    #     pickle.dump(history.history, file_pi)
 
 
     ## optimize threshold
     print("Optimizing threshold on the validation set...")
-    # optimal_thresh = opt_thresh.optimize_threshold_full(data_splits["validate"], patch_len, testing_model, name, mode)
 
-    optimal_thresholds = opt_thresh.optimize_threshold_individual(data_splits["validate"], patch_len, model, name, mode)
+    optimal_thresholds = opt_thresh.optimize_threshold_individual(data_splits["validate"], patch_len, model, name)
 
-    # optimal_thresholds = [0.1, 0.3, 0.4, 0.4]
 
     ## evaluation on test set
     print("Evaluation on the test set...")
-
-    evaluate.evaluate_full_individual(data_splits["test"], model, patch_len, name, optimal_thresholds, mode)
-
-    # evaluate.evaluate_full(data_splits["test"], testing_model, patch_len, name, optimal_thresholds, mode)
+    evaluate.evaluate_full_individual(data_splits["test"], model, patch_len, name, optimal_thresholds)
 
 
     return model, history
