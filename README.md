@@ -1,13 +1,23 @@
 # Voice Assignment of Vocal Quartets
 
-**This repo is a work in progress. This README file is the ongoing documentation, and all scripts are not yet uploaded/up-to-date.**
+**Note:**: *This repo is a work in progress. This README file is the ongoing documentation, 
+and all scripts are not yet uploaded/up-to-date.*
 
 This repository contains the accompanying code for the paper:
 
-[Paper REF]
+Helena Cuesta & Emilia Gómez (2022). **Voice Assignment in Vocal Quartets using Deep Learning Models 
+based on Pitch Salience.** Accepted in TISMIR (_to appear_).
 
 ## Description
-TBD
+This is the accompanying code repository for the paper mentioned above. It currently contains the trained models for 
+*Voice Assignment* (VA), namely `voas_cnn` and `voas_clstm` and the associated code to use them with pre-extracted 
+pitch salience representations -- see **Priors** for information on how to obtain such representations.
+
+Additionals scripts to reproduce/extend the examples from the *Synth-salience Choral Set* (SSCS), the 
+synthetic dataset considered in this work, will be provided soon. 
+
+The dataset can be downloaded following 
+<a href="https://drive.google.com/file/d/1ai6WsRc5fhRDCPN4ZHeuPdMqLMS-c57d/view">this link</a>.   
 
 ## Usage
 
