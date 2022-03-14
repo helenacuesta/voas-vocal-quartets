@@ -10,10 +10,8 @@ import voas.optimize_thresh as opt_thresh
 import voas.evaluate as evaluate
 import voas.models as models
 
-import pickle
 import datetime
 
-#tf.config.optimizer.set_experimental_options({'layout_optimizer': False})
 
 def config_callbacks(exp_name):
     # define callbacks
