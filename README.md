@@ -17,7 +17,8 @@ Additionals scripts to reproduce/extend the examples from the *Synth-salience Ch
 synthetic dataset considered in this work, will be provided soon. 
 
 The dataset can be downloaded following 
-<a href="https://drive.google.com/file/d/1ai6WsRc5fhRDCPN4ZHeuPdMqLMS-c57d/view">this link</a>.   
+<a href="https://drive.google.com/file/d/1ai6WsRc5fhRDCPN4ZHeuPdMqLMS-c57d/view">this link</a>, and the 
+training/validation/test data splits are available in `data/data_splits_hpc.json`.
 
 ## Usage
 
