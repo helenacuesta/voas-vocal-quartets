@@ -5,8 +5,7 @@ and all scripts are not yet uploaded/up-to-date.*
 
 This repository contains the accompanying code for the paper:
 
-Helena Cuesta & Emilia Gómez (2022). **Voice Assignment in Vocal Quartets using Deep Learning Models 
-based on Pitch Salience.** Accepted in TISMIR (_to appear_).
+Helena Cuesta & Emilia Gómez. (2022). **Voice Assignment in Vocal Quartets Using Deep Learning Models Based on Pitch Salience**. Transactions of the International Society for Music Information Retrieval (TISMIR), 5(1), 99–112. DOI: http://doi.org/10.5334/tismir.121.
 
 ## Description
 This is the accompanying code repository for the paper mentioned above. It currently contains the trained models for 
@@ -17,7 +16,7 @@ Additionals scripts to reproduce/extend the examples from the *Synth-salience Ch
 synthetic dataset considered in this work, will be provided soon. 
 
 The dataset can be downloaded following 
-<a href="https://drive.google.com/file/d/1ai6WsRc5fhRDCPN4ZHeuPdMqLMS-c57d/view">this link</a>, and the 
+<a href="https://zenodo.org/record/6534429">this link</a>, and the 
 training/validation/test data splits are available in `data/data_splits_hpc.json`.
 
 ## Usage
